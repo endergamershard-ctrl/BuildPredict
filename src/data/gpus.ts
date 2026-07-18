@@ -1,0 +1,108 @@
+import type { GpuPart } from "@/lib/types";
+
+/** Curated GPU sample set. Raster index is relative at 1080p Ultra. */
+export const GPUS: GpuPart[] = [
+  {
+    id: "rtx-3060",
+    name: "NVIDIA GeForce RTX 3060 12GB",
+    brand: "NVIDIA",
+    vramGb: 12,
+    tdpW: 170,
+    rasterIndex: 100,
+    tier: "mid",
+  },
+  {
+    id: "rtx-4060",
+    name: "NVIDIA GeForce RTX 4060",
+    brand: "NVIDIA",
+    vramGb: 8,
+    tdpW: 115,
+    rasterIndex: 115,
+    tier: "mid",
+  },
+  {
+    id: "rtx-4070",
+    name: "NVIDIA GeForce RTX 4070",
+    brand: "NVIDIA",
+    vramGb: 12,
+    tdpW: 200,
+    rasterIndex: 160,
+    tier: "high",
+  },
+  {
+    id: "rtx-4070-ti-super",
+    name: "NVIDIA GeForce RTX 4070 Ti SUPER",
+    brand: "NVIDIA",
+    vramGb: 16,
+    tdpW: 285,
+    rasterIndex: 195,
+    tier: "high",
+  },
+  {
+    id: "rtx-4080-super",
+    name: "NVIDIA GeForce RTX 4080 SUPER",
+    brand: "NVIDIA",
+    vramGb: 16,
+    tdpW: 320,
+    rasterIndex: 240,
+    tier: "enthusiast",
+  },
+  {
+    id: "rtx-4090",
+    name: "NVIDIA GeForce RTX 4090",
+    brand: "NVIDIA",
+    vramGb: 24,
+    tdpW: 450,
+    rasterIndex: 300,
+    tier: "enthusiast",
+  },
+  {
+    id: "rx-6600",
+    name: "AMD Radeon RX 6600",
+    brand: "AMD",
+    vramGb: 8,
+    tdpW: 132,
+    rasterIndex: 95,
+    tier: "mid",
+  },
+  {
+    id: "rx-7600",
+    name: "AMD Radeon RX 7600",
+    brand: "AMD",
+    vramGb: 8,
+    tdpW: 165,
+    rasterIndex: 120,
+    tier: "mid",
+  },
+  {
+    id: "rx-7800-xt",
+    name: "AMD Radeon RX 7800 XT",
+    brand: "AMD",
+    vramGb: 16,
+    tdpW: 263,
+    rasterIndex: 185,
+    tier: "high",
+  },
+  {
+    id: "rx-7900-xtx",
+    name: "AMD Radeon RX 7900 XTX",
+    brand: "AMD",
+    vramGb: 24,
+    tdpW: 355,
+    rasterIndex: 255,
+    tier: "enthusiast",
+  },
+  {
+    id: "arc-b580",
+    name: "Intel Arc B580",
+    brand: "Intel",
+    vramGb: 12,
+    tdpW: 190,
+    rasterIndex: 110,
+    tier: "mid",
+  },
+];
+
+export function getGpu(id: string): GpuPart | undefined {
+  return GPUS.find((gpu) => gpu.id === id);
+}

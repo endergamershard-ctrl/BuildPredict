@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+:root {
+  --background: #050805;
+  --surface: #0b120b;
+  --surface-alt: #101a10;
+  --border: #1f3d1f;
+  --border-bright: #2f6b2f;
+  --foreground: #b8ffb8;
+  --muted: #6f9f6f;
+  --accent: #00ff41;
+  --accent-dim: #00c832;
+  --accent-glow: rgba(0, 255, 65, 0.25);
+  --danger: #ff4d4d;
+  --warning: #d4ff4d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-border: var(--border);
+  --color-border-bright: var(--border-bright);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at top, rgba(0, 255, 65, 0.06), transparent 45%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: rgba(0, 255, 65, 0.35);
+  color: #041004;
+}
+
+a {
+  color: var(--accent);
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.matrix-table th,
+.matrix-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.7rem 0.85rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.matrix-table th {
+  color: var(--accent);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--surface-alt);
+}
+
+.matrix-table tbody tr:nth-child(even) {
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.matrix-table tbody tr:hover {
+  background: rgba(0, 255, 65, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.2);
+}
+
+.glow-panel {
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0, 255, 65, 0.05), transparent 40%),
+    var(--surface);
+  box-shadow: 0 0 24px rgba(0, 255, 65, 0.05);
+}
+
+.btn-matrix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid var(--accent-dim);
+  background: rgba(0, 255, 65, 0.08);
+  color: var(--accent);
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background 120ms ease, box-shadow 120ms ease, color 120ms ease;
+}
+
+.btn-matrix:hover {
+  background: rgba(0, 255, 65, 0.18);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.btn-matrix:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-ghost {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  color: var(--accent);
+  border-color: var(--border-bright);
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: #050a05;
+  color: var(--foreground);
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.35);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-bright);
+  color: var(--accent);
+  background: rgba(0, 255, 65, 0.08);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.7rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
