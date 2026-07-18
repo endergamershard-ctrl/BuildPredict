@@ -1,0 +1,192 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri build -- --no-bundle
+
+      - name: Package portable tarball
+        run: |
+          chmod +x scripts/package-linux.sh scripts/install.sh scripts/uninstall.sh
+          ./scripts/package-linux.sh
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64
+          path: dist-release/buildpredict-linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app (NSIS)
+        run: npm run tauri build -- --bundles nsis
+
+      - name: Locate NSIS installer
+        id: nsis
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*setup.exe" |
+            Select-Object -First 1
+          if (-not $installer) { throw "NSIS installer not found" }
+          "path=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: ${{ steps.nsis.outputs.path }}
+          if-no-files-found: error
+
+  build-macos:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            suffix: aarch64
+          - runner: macos-13
+            target: x86_64-apple-darwin
+            suffix: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app (DMG)
+        run: npm run tauri build -- --target ${{ matrix.target }} --bundles dmg
+
+      - name: Rename DMG
+        run: |
+          dmg=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" -name '*.dmg' | head -n1)
+          if [ -z "$dmg" ]; then echo "DMG not found" >&2; exit 1; fi
+          mkdir -p dist-release
+          cp "$dmg" "dist-release/BuildPredict-macos-${{ matrix.suffix }}.dmg"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.suffix }}
+          path: dist-release/BuildPredict-macos-${{ matrix.suffix }}.dmg
+          if-no-files-found: error
+
+  publish:
+    needs: [build-linux, build-windows, build-macos]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Flatten release assets
+        run: |
+          mkdir -p upload
+          find release-assets -type f \( -name '*.tar.gz' -o -name '*setup.exe' -o -name '*.dmg' \) -exec cp {} upload/ \;
+          ls -la upload
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          generate_release_notes: true
+          files: upload/*
+          fail_on_unmatched_files: true
+          body: |
+            ## Install
+
+            **Linux (x86_64)**
+            ```sh
+            curl -fsSL https://raw.githubusercontent.com/endergamershard-ctrl/BuildPredict/main/scripts/install.sh | bash
+            ```
+
+            **macOS (Intel & Apple Silicon)**
+            ```sh
+            curl -fsSL https://raw.githubusercontent.com/endergamershard-ctrl/BuildPredict/main/scripts/install.sh | bash
+            ```
+
+            **Windows (PowerShell)**
+            ```powershell
+            irm https://raw.githubusercontent.com/endergamershard-ctrl/BuildPredict/main/scripts/install.ps1 | iex
+            ```
+
+            Builds are unsigned; SmartScreen/Gatekeeper may warn on first run.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

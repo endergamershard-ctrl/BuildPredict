@@ -4,6 +4,51 @@ PCPartPicker-style System Builder with gaming FPS and coding workload estimates.
 
 Matrix-green dark UI. Manual curated parts catalog — no PCPartPicker scraping (no public API).
 
+Ships as a desktop app (Tauri) for Linux, macOS, and Windows.
+
+**Releases:** https://github.com/endergamershard-ctrl/BuildPredict/releases
+
+## Install (one-liner)
+
+### Linux (x86_64, incl. Arch)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/endergamershard-ctrl/BuildPredict/main/scripts/install.sh | bash
+```
+
+Installs the binary to `~/.local/bin`, a desktop entry, and an icon. Launch from
+your app menu or run `buildpredict`.
+
+Uninstall:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/endergamershard-ctrl/BuildPredict/main/scripts/uninstall.sh | bash
+```
+
+### macOS (Intel & Apple Silicon)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/endergamershard-ctrl/BuildPredict/main/scripts/install.sh | bash
+```
+
+Installs `BuildPredict.app` to `/Applications`. Builds are unsigned — on first
+launch, right-click the app and choose **Open**.
+
+### Windows (x64)
+
+In PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/endergamershard-ctrl/BuildPredict/main/scripts/install.ps1 | iex
+```
+
+Downloads and runs the latest NSIS installer. Launch **BuildPredict** from the
+Start Menu.
+
+> Windows builds are unsigned. SmartScreen may warn on first run — choose
+> **More info → Run anyway**. WebView2 Runtime is required (preinstalled on
+> most Windows 10/11 systems).
+
 ## Features
 
 - System Builder table with CPU / GPU / Memory slots
@@ -15,23 +60,29 @@ Matrix-green dark UI. Manual curated parts catalog — no PCPartPicker scraping 
 
 ## Stack
 
-- Next.js (App Router) + TypeScript + Tailwind CSS
+- Next.js (App Router) + TypeScript + Tailwind CSS, statically exported
+- Tauri 2 desktop shell (Rust)
 - Vitest for pure prediction unit tests
 - Local curated benchmark indices under `src/data/`
 
-## Getting started
+## Development
+
+Requirements: Node.js 22+, Rust 1.77+, and the [Tauri 2 system dependencies](https://v2.tauri.app/start/prerequisites/).
 
 ```bash
 npm install
-npm run dev
+npm run dev          # web dev server at http://localhost:3000
+npm run tauri dev    # desktop app with hot reload
 ```
-
-Open [http://localhost:3000](http://localhost:3000).
 
 ```bash
-npm test
-npm run build
+npm test             # prediction unit tests
+npm run build        # static web export to out/
+npm run tauri build  # desktop release build
 ```
+
+Releases are built by GitHub Actions on version tags (`v*`): a portable Linux
+tarball, macOS DMGs for both architectures, and a Windows NSIS installer.
 
 ## Prediction model (MVP)
 
