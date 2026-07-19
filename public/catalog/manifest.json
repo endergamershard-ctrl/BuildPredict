@@ -1,0 +1,149 @@
+{
+  "version": "2026.07-opendb",
+  "source": "https://github.com/buildcores/buildcores-open-db",
+  "sourceRevision": "0cf5d575d23dc7b61c91e6350c67f90a38e1dad2",
+  "license": "ODC-By-1.0",
+  "attribution": "Component catalog derived from BuildCores OpenDB (https://github.com/buildcores/buildcores-open-db), licensed under the Open Data Commons Attribution License (ODC-By) v1.0.",
+  "updated": "2026-07-19",
+  "categories": [
+    {
+      "id": "cpu",
+      "openDb": "CPU",
+      "count": 789,
+      "file": "cpu.json"
+    },
+    {
+      "id": "cpu-cooler",
+      "openDb": "CPUCooler",
+      "count": 2392,
+      "file": "cpu-cooler.json"
+    },
+    {
+      "id": "motherboard",
+      "openDb": "Motherboard",
+      "count": 3693,
+      "file": "motherboard.json"
+    },
+    {
+      "id": "memory",
+      "openDb": "RAM",
+      "count": 4482,
+      "file": "memory.json"
+    },
+    {
+      "id": "storage",
+      "openDb": "Storage",
+      "count": 3496,
+      "file": "storage.json"
+    },
+    {
+      "id": "gpu",
+      "openDb": "GPU",
+      "count": 3833,
+      "file": "gpu.json"
+    },
+    {
+      "id": "case",
+      "openDb": "PCCase",
+      "count": 3728,
+      "file": "case.json"
+    },
+    {
+      "id": "psu",
+      "openDb": "PSU",
+      "count": 3286,
+      "file": "psu.json"
+    },
+    {
+      "id": "os",
+      "openDb": "OS",
+      "count": 11,
+      "file": "os.json"
+    },
+    {
+      "id": "case-fan",
+      "openDb": "CaseFan",
+      "count": 3309,
+      "file": "case-fan.json"
+    },
+    {
+      "id": "thermal-compound",
+      "openDb": "ThermalCompound",
+      "count": 227,
+      "file": "thermal-compound.json"
+    },
+    {
+      "id": "monitor",
+      "openDb": "Monitor",
+      "count": 3849,
+      "file": "monitor.json"
+    },
+    {
+      "id": "capture-card",
+      "openDb": "CaptureCard",
+      "count": 30,
+      "file": "capture-card.json"
+    },
+    {
+      "id": "network-card",
+      "openDb": "NetworkCard",
+      "count": 178,
+      "file": "network-card.json"
+    },
+    {
+      "id": "sound-card",
+      "openDb": "SoundCard",
+      "count": 84,
+      "file": "sound-card.json"
+    },
+    {
+      "id": "keyboard",
+      "openDb": "Keyboard",
+      "count": 4036,
+      "file": "keyboard.json"
+    },
+    {
+      "id": "mouse",
+      "openDb": "Mouse",
+      "count": 4423,
+      "file": "mouse.json"
+    },
+    {
+      "id": "headphones",
+      "openDb": "Headphones",
+      "count": 2991,
+      "file": "headphones.json"
+    },
+    {
+      "id": "speakers",
+      "openDb": "Speaker",
+      "count": 516,
+      "file": "speakers.json"
+    },
+    {
+      "id": "microphone",
+      "openDb": "Microphone",
+      "count": 113,
+      "file": "microphone.json"
+    },
+    {
+      "id": "webcam",
+      "openDb": "Webcam",
+      "count": 293,
+      "file": "webcam.json"
+    },
+    {
+      "id": "lighting",
+      "openDb": "Lighting",
+      "count": 6,
+      "file": "lighting.json"
+    },
+    {
+      "id": "accessory",
+      "openDb": "Accessory",
+      "count": 45,
+      "file": "accessory.json"
+    }
+  ],
+  "totalParts": 45810
+}

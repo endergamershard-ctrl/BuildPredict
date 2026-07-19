@@ -21,6 +21,9 @@
 /build
 /dist-release
 
+# OpenDB clone cache used by catalog normalize
+/.cache/
+
 # misc
 .DS_Store
 *.pem

@@ -1,6 +1,7 @@
 import { GAMES, WORKLOADS } from "@/data";
 import type {
   BuildSelection,
+  CompatIssue,
   PredictionResult,
   QualityPreset,
   Resolution,
@@ -72,26 +73,15 @@ export function PredictionPanel({
         {result.gaming ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Metric
-                label="Avg FPS"
-                value={`${result.gaming.avgFps.expected}`}
-              />
-              <Metric
-                label="1% Low"
-                value={`${result.gaming.onePercentLow}`}
-              />
-              <Metric
-                label="CPU Util"
-                value={`${result.gaming.cpuUtilPct}%`}
-              />
-              <Metric
-                label="GPU Util"
-                value={`${result.gaming.gpuUtilPct}%`}
-              />
+              <Metric label="Avg FPS" value={`${result.gaming.avgFps.expected}`} />
+              <Metric label="1% Low" value={`${result.gaming.onePercentLow}`} />
+              <Metric label="CPU Util" value={`${result.gaming.cpuUtilPct}%`} />
+              <Metric label="GPU Util" value={`${result.gaming.gpuUtilPct}%`} />
             </div>
             <p className="font-mono text-sm text-accent">
               Range {result.gaming.avgFps.low}–{result.gaming.avgFps.high} FPS ·
-              Limiter: {result.gaming.limitingComponent.toUpperCase()}
+              Limiter: {result.gaming.limitingComponent.toUpperCase()} ·
+              Confidence: {result.gaming.confidence}
             </p>
             <ul className="space-y-1 text-sm text-muted">
               {result.gaming.explanations.map((line) => (
@@ -107,7 +97,7 @@ export function PredictionPanel({
       <section className="glow-panel p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-accent">
-            Coding / Workload Prediction
+            Coding / Workload + Compatibility
           </h2>
           <span className="badge">estimate</span>
         </div>
@@ -135,12 +125,9 @@ export function PredictionPanel({
         </div>
 
         {result.coding ? (
-          <div className="space-y-3">
+          <div className="mb-4 space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Metric
-                label="Score"
-                value={`${result.coding.score.expected}`}
-              />
+              <Metric label="Score" value={`${result.coding.score.expected}`} />
               <Metric
                 label="CPU Load"
                 value={`${result.coding.estimatedCpuLoadPct}%`}
@@ -152,19 +139,44 @@ export function PredictionPanel({
             </div>
             <p className="font-mono text-sm text-accent">
               Range {result.coding.score.low}–{result.coding.score.high} ·
-              Limiter: {result.coding.limitingComponent.toUpperCase()}
+              Confidence: {result.coding.confidence}
             </p>
-            <ul className="space-y-1 text-sm text-muted">
-              {result.coding.explanations.map((line) => (
-                <li key={line}>{`// ${line}`}</li>
-              ))}
-            </ul>
           </div>
         ) : (
           <EmptyState text="Select CPU and Memory to unlock coding workload estimates." />
         )}
+
+        <CompatList issues={result.compatibility.issues} />
       </section>
     </div>
+  );
+}
+
+function CompatList({ issues }: { issues: CompatIssue[] }) {
+  if (!issues.length) {
+    return (
+      <p className="text-sm text-muted">
+        No compatibility issues detected with available data.
+      </p>
+    );
+  }
+  return (
+    <ul className="max-h-48 space-y-1 overflow-y-auto text-sm">
+      {issues.map((issue) => (
+        <li
+          key={`${issue.code}-${issue.message}`}
+          className={
+            issue.severity === "error"
+              ? "text-danger"
+              : issue.severity === "warning"
+                ? "text-warning"
+                : "text-muted"
+          }
+        >
+          [{issue.severity}] {issue.message}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -196,7 +208,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
+    <div className="mb-4 rounded border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
       {text}
     </div>
   );

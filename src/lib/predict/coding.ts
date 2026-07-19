@@ -1,8 +1,8 @@
+import { matchCpuProfile } from "@/data/perf-profiles";
 import type {
+  CatalogPart,
   CodingPrediction,
   CodingWorkload,
-  CpuPart,
-  MemoryPart,
 } from "@/lib/types";
 
 const REFERENCE_MULTI = 175;
@@ -16,23 +16,49 @@ function round(value: number): number {
   return Math.round(value);
 }
 
+function cpuIndexes(cpu: CatalogPart) {
+  const profile = matchCpuProfile(cpu.name);
+  if (profile) {
+    return {
+      single: profile.singleThreadIndex,
+      multi: profile.multiThreadIndex,
+      confidence: "high" as const,
+    };
+  }
+  const cores = Number(cpu.specs.cores) || 6;
+  const threads = Number(cpu.specs.threads) || cores;
+  const boost = Number(cpu.specs.boostGhz) || 4.0;
+  const single = Math.round(80 + boost * 12 + Math.min(cores, 8) * 2);
+  const multi = Math.round(single * (0.55 + threads / 20));
+  return { single, multi, confidence: "low" as const };
+}
+
 export function predictCoding(input: {
-  cpu: CpuPart;
-  memory: MemoryPart;
+  cpu: CatalogPart;
+  memory: CatalogPart[];
   workload: CodingWorkload;
 }): CodingPrediction {
   const { cpu, memory, workload } = input;
+  const cpuIdx = cpuIndexes(cpu);
+  const capacityGb = memory.reduce(
+    (sum, kit) => sum + (Number(kit.specs.capacityGb) || 0),
+    0,
+  );
+  const maxSpeed = Math.max(
+    0,
+    ...memory.map((kit) => Number(kit.specs.speedMtps) || 0),
+  );
 
   const multiContribution =
-    (cpu.multiThreadIndex / REFERENCE_MULTI) * workload.multiThreadWeight;
+    (cpuIdx.multi / REFERENCE_MULTI) * workload.multiThreadWeight;
   const singleContribution =
-    (cpu.singleThreadIndex / REFERENCE_SINGLE) *
-    (1 - workload.multiThreadWeight);
+    (cpuIdx.single / REFERENCE_SINGLE) * (1 - workload.multiThreadWeight);
 
   let cpuScore = (multiContribution + singleContribution) * 100;
   cpuScore *= 100 / workload.intensity;
 
-  const ramRatio = memory.capacityGb / workload.preferredRamGb;
+  const ramRatio =
+    capacityGb > 0 ? capacityGb / workload.preferredRamGb : 0.5;
   let memoryFactor = 1;
   let memoryPressurePct = 40;
 
@@ -52,9 +78,7 @@ export function predictCoding(input: {
     memoryPressurePct = 45;
   }
 
-  if (memory.speedMtps >= 6000) {
-    memoryFactor *= 1.02;
-  }
+  if (maxSpeed >= 6000) memoryFactor *= 1.02;
 
   const expected = cpuScore * memoryFactor;
   const estimatedCpuLoadPct = clamp(
@@ -67,35 +91,40 @@ export function predictCoding(input: {
   if (memoryPressurePct >= 80) limitingComponent = "memory";
   else if (estimatedCpuLoadPct >= 85) limitingComponent = "cpu";
 
-  const spread = limitingComponent === "balanced" ? 0.07 : 0.11;
-  const score = {
-    low: round(expected * (1 - spread)),
-    expected: round(expected),
-    high: round(expected * (1 + spread * 0.75)),
-  };
+  const confidence = cpuIdx.confidence;
+  const spread = confidence === "high" ? (limitingComponent === "balanced" ? 0.07 : 0.11) : 0.16;
 
-  const explanations: string[] = [
+  const explanations = [
     `${workload.name} weights multi-thread at ${Math.round(workload.multiThreadWeight * 100)}%.`,
-    `${cpu.name} multi-thread index ${cpu.multiThreadIndex} drives most of the score.`,
+    `${cpu.name} multi-thread index ~${cpuIdx.multi} drives most of the score.`,
   ];
-
   if (memoryPressurePct >= 80) {
     explanations.push(
-      `${memory.capacityGb}GB is below the preferred ${workload.preferredRamGb}GB for this workload.`,
+      `${capacityGb || "?"}GB is below the preferred ${workload.preferredRamGb}GB for this workload.`,
     );
   } else {
     explanations.push(
-      `${memory.capacityGb}GB ${memory.type}-${memory.speedMtps} looks sufficient for this task.`,
+      `${capacityGb || "?"}GB memory looks sufficient for this task.`,
+    );
+  }
+  if (confidence !== "high") {
+    explanations.push(
+      "Lower confidence: CPU lacks a curated benchmark profile; using conservative spec estimates.",
     );
   }
   explanations.push("Score is relative (100 ≈ Ryzen 5 7600 + 32GB on a mid-intensity job).");
 
   return {
-    score,
+    score: {
+      low: round(expected * (1 - spread)),
+      expected: round(expected),
+      high: round(expected * (1 + spread * 0.75)),
+    },
     estimatedCpuLoadPct,
     memoryPressurePct,
     relativeToBaseline: round(expected),
     limitingComponent,
+    confidence,
     explanations,
   };
 }

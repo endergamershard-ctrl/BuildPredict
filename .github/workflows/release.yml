@@ -44,6 +44,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Verify catalog snapshot
+        run: test -f public/catalog/manifest.json && test -f public/catalog/cpu.json
+
       - name: Build Tauri app
         run: npm run tauri build -- --no-bundle
 
@@ -185,6 +188,8 @@ jobs:
             irm https://raw.githubusercontent.com/endergamershard-ctrl/BuildPredict/main/scripts/install.ps1 | iex
             ```
 
+            Includes the BuildCores OpenDB offline catalog (~45k parts), compatibility checks, and optional live pricing.
             Builds are unsigned; SmartScreen/Gatekeeper may warn on first run.
+            Not affiliated with PCPartPicker.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

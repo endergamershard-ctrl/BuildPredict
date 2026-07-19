@@ -1,11 +1,17 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
-  "windows": [
-    "main"
-  ],
+  "description": "Default BuildPredict permissions",
+  "windows": ["main"],
   "permissions": [
-    "core:default"
+    "core:default",
+    "store:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.bestbuy.com/**" },
+        { "url": "https://api.retailerapi.com/**" }
+      ]
+    }
   ]
 }

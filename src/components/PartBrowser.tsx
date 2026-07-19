@@ -1,94 +1,115 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CPUS, GPUS, MEMORY } from "@/data";
-import type { BrowserSlot } from "@/lib/build-state";
-import { slotLabel } from "@/lib/build-state";
+import { useEffect, useMemo, useState } from "react";
+import { browseCategory } from "@/lib/catalog";
+import { makeCustomPart, slotLabel } from "@/lib/build-state";
+import type { CategoryId } from "@/lib/categories";
+import type { CatalogPart } from "@/lib/types";
 
 interface PartBrowserProps {
-  slot: BrowserSlot;
-  onAdd: (id: string) => void;
+  slot: CategoryId;
+  onAdd: (id: string, custom?: CatalogPart) => void;
   onClose: () => void;
+  compatibleOnly?: boolean;
+  compatibilityFilter?: (part: CatalogPart) => boolean;
 }
 
-type SortKey = "name" | "perf" | "power" | "capacity";
+const PAGE_SIZE = 40;
 
-export function PartBrowser({ slot, onAdd, onClose }: PartBrowserProps) {
+interface CatalogSnap {
+  key: string;
+  parts: CatalogPart[];
+  total: number;
+  manufacturers: string[];
+  error: string | null;
+}
+
+export function PartBrowser({
+  slot,
+  onAdd,
+  onClose,
+  compatibleOnly = false,
+  compatibilityFilter,
+}: PartBrowserProps) {
   const [query, setQuery] = useState("");
-  const [brand, setBrand] = useState("all");
-  const [sortKey, setSortKey] = useState<SortKey>("perf");
+  const [manufacturer, setManufacturer] = useState("all");
+  const [page, setPage] = useState(0);
+  const [filterCompat, setFilterCompat] = useState(compatibleOnly);
+  const [customName, setCustomName] = useState("");
+  const [snap, setSnap] = useState<CatalogSnap | null>(null);
 
-  const brands = useMemo(() => {
-    if (slot === "cpu") return ["AMD", "Intel"];
-    if (slot === "gpu") return ["NVIDIA", "AMD", "Intel"];
-    return ["DDR4", "DDR5"];
-  }, [slot]);
+  const requestKey = useMemo(
+    () =>
+      JSON.stringify({
+        slot,
+        query,
+        manufacturer,
+        page,
+        filterCompat,
+      }),
+    [slot, query, manufacturer, page, filterCompat],
+  );
 
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-
-    if (slot === "cpu") {
-      return CPUS.filter((cpu) => {
-        const brandOk = brand === "all" || cpu.brand === brand;
-        const textOk =
-          !q ||
-          cpu.name.toLowerCase().includes(q) ||
-          cpu.socket.toLowerCase().includes(q);
-        return brandOk && textOk;
+  useEffect(() => {
+    let cancelled = false;
+    browseCategory(
+      slot,
+      {
+        query,
+        manufacturer,
+        predicate:
+          filterCompat && compatibilityFilter ? compatibilityFilter : undefined,
+      },
+      page,
+      PAGE_SIZE,
+    )
+      .then((result) => {
+        if (cancelled) return;
+        setSnap({
+          key: requestKey,
+          parts: result.parts,
+          total: result.total,
+          manufacturers: result.manufacturers,
+          error: null,
+        });
       })
-        .sort((a, b) => {
-          if (sortKey === "name") return a.name.localeCompare(b.name);
-          if (sortKey === "power") return a.tdpW - b.tdpW;
-          return b.singleThreadIndex - a.singleThreadIndex;
-        })
-        .map((cpu) => ({
-          id: cpu.id,
-          name: cpu.name,
-          meta: `${cpu.brand} · ${cpu.cores}C/${cpu.threads}T · ${cpu.boostGhz} GHz · ${cpu.socket}`,
-          score: `ST ${cpu.singleThreadIndex} / MT ${cpu.multiThreadIndex}`,
-          power: `${cpu.tdpW}W`,
-        }));
-    }
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setSnap({
+          key: requestKey,
+          parts: [],
+          total: 0,
+          manufacturers: [],
+          error: err.message || "Failed to load catalog",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    slot,
+    query,
+    manufacturer,
+    page,
+    filterCompat,
+    compatibilityFilter,
+    requestKey,
+  ]);
 
-    if (slot === "gpu") {
-      return GPUS.filter((gpu) => {
-        const brandOk = brand === "all" || gpu.brand === brand;
-        const textOk = !q || gpu.name.toLowerCase().includes(q);
-        return brandOk && textOk;
-      })
-        .sort((a, b) => {
-          if (sortKey === "name") return a.name.localeCompare(b.name);
-          if (sortKey === "power") return a.tdpW - b.tdpW;
-          if (sortKey === "capacity") return b.vramGb - a.vramGb;
-          return b.rasterIndex - a.rasterIndex;
-        })
-        .map((gpu) => ({
-          id: gpu.id,
-          name: gpu.name,
-          meta: `${gpu.brand} · ${gpu.vramGb}GB · ${gpu.tier}`,
-          score: `Raster ${gpu.rasterIndex}`,
-          power: `${gpu.tdpW}W`,
-        }));
-    }
+  const loading = !snap || snap.key !== requestKey;
+  const parts = snap?.key === requestKey ? snap.parts : [];
+  const total = snap?.key === requestKey ? snap.total : 0;
+  const manufacturers =
+    snap?.key === requestKey ? snap.manufacturers : [];
+  const error = snap?.key === requestKey ? snap.error : null;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-    return MEMORY.filter((kit) => {
-      const typeOk = brand === "all" || kit.type === brand;
-      const textOk = !q || kit.name.toLowerCase().includes(q);
-      return typeOk && textOk;
-    })
-      .sort((a, b) => {
-        if (sortKey === "name") return a.name.localeCompare(b.name);
-        if (sortKey === "power") return a.tdpW - b.tdpW;
-        return b.capacityGb - a.capacityGb || b.speedMtps - a.speedMtps;
-      })
-      .map((kit) => ({
-        id: kit.id,
-        name: kit.name,
-        meta: `${kit.type} · ${kit.modules}`,
-        score: `${kit.capacityGb}GB @ ${kit.speedMtps}`,
-        power: `${kit.tdpW}W`,
-      }));
-  }, [slot, query, brand, sortKey]);
+  const subtitle = `${total.toLocaleString()} parts · BuildCores OpenDB (ODC-By) · not PCPartPicker`;
+
+  function addCustom() {
+    const part = makeCustomPart(slot, customName, "User-entered custom part");
+    onAdd(part.id, part);
+  }
 
   return (
     <div className="glow-panel overflow-hidden">
@@ -97,36 +118,40 @@ export function PartBrowser({ slot, onAdd, onClose }: PartBrowserProps) {
           <div className="font-mono text-xs uppercase tracking-[0.16em] text-accent">
             Part Browser // {slotLabel(slot)}
           </div>
-          <p className="text-xs text-muted">
-            Manual curated catalog — not live PCPartPicker data.
-          </p>
+          <p className="text-xs text-muted">{subtitle}</p>
         </div>
         <button type="button" className="btn-ghost" onClick={onClose}>
           Back to builder
         </button>
       </div>
 
-      <div className="grid gap-4 p-4 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-4 p-4 lg:grid-cols-[240px_1fr]">
         <aside className="space-y-4 rounded border border-border bg-surface-alt/60 p-3">
           <label className="block space-y-1 text-xs uppercase tracking-[0.12em] text-muted">
             Search
             <input
               className="field"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setPage(0);
+                setQuery(e.target.value);
+              }}
               placeholder={`Filter ${slotLabel(slot)}…`}
             />
           </label>
 
           <label className="block space-y-1 text-xs uppercase tracking-[0.12em] text-muted">
-            {slot === "memory" ? "Type" : "Brand"}
+            Manufacturer
             <select
               className="field"
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
+              value={manufacturer}
+              onChange={(e) => {
+                setPage(0);
+                setManufacturer(e.target.value);
+              }}
             >
               <option value="all">All</option>
-              {brands.map((item) => (
+              {manufacturers.map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
@@ -134,61 +159,112 @@ export function PartBrowser({ slot, onAdd, onClose }: PartBrowserProps) {
             </select>
           </label>
 
-          <label className="block space-y-1 text-xs uppercase tracking-[0.12em] text-muted">
-            Sort
-            <select
+          {compatibilityFilter ? (
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={filterCompat}
+                onChange={(e) => {
+                  setPage(0);
+                  setFilterCompat(e.target.checked);
+                }}
+              />
+              Hide obvious incompatibilities
+            </label>
+          ) : null}
+
+          <div className="space-y-2 border-t border-border pt-3">
+            <div className="text-xs uppercase tracking-[0.12em] text-muted">
+              Add custom part
+            </div>
+            <input
               className="field"
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              placeholder="Custom product name"
+            />
+            <button
+              type="button"
+              className="btn-matrix w-full"
+              disabled={!customName.trim()}
+              onClick={addCustom}
             >
-              <option value="perf">Performance</option>
-              <option value="name">Name</option>
-              <option value="power">Power</option>
-              {(slot === "gpu" || slot === "memory") && (
-                <option value="capacity">Capacity</option>
-              )}
-            </select>
-          </label>
+              Add custom
+            </button>
+          </div>
         </aside>
 
         <div className="overflow-x-auto rounded border border-border">
-          <table className="matrix-table min-w-[700px]">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Details</th>
-                <th>Index</th>
-                <th>Power</th>
-                <th className="w-28"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td className="font-medium">{row.name}</td>
-                  <td className="text-sm text-muted">{row.meta}</td>
-                  <td className="font-mono text-sm text-accent">{row.score}</td>
-                  <td className="text-sm">{row.power}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn-matrix"
-                      onClick={() => onAdd(row.id)}
-                    >
-                      Add
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
+          {error ? (
+            <div className="p-6 text-center text-sm text-danger">{error}</div>
+          ) : (
+            <table className="matrix-table min-w-[780px]">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="text-center text-muted">
-                    No parts match these filters.
-                  </td>
+                  <th>Name</th>
+                  <th>Manufacturer</th>
+                  <th>Details</th>
+                  <th className="w-28"></th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="text-center text-muted">
+                      Loading catalog…
+                    </td>
+                  </tr>
+                ) : parts.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center text-muted">
+                      No parts match these filters.
+                    </td>
+                  </tr>
+                ) : (
+                  parts.map((row) => (
+                    <tr key={row.id}>
+                      <td className="font-medium">{row.name}</td>
+                      <td className="text-sm text-muted">{row.manufacturer}</td>
+                      <td className="text-sm text-muted">{row.summary}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn-matrix"
+                          onClick={() => onAdd(row.id)}
+                        >
+                          Add
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs text-muted">
+            <span>
+              Page {page + 1} / {pageCount}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={page <= 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={page + 1 >= pageCount}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

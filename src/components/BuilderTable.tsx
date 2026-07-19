@@ -1,120 +1,148 @@
-import { getCpu, getGpu, getMemory } from "@/data";
-import type { BrowserSlot } from "@/lib/build-state";
-import { slotLabel } from "@/lib/build-state";
-import type { BuildSelection } from "@/lib/types";
+"use client";
+
+import { CATEGORIES, type CategoryId } from "@/lib/categories";
+import { getSlotIds, slotLabel } from "@/lib/build-state";
+import type { BuildSelection, CatalogPart, CompatIssue } from "@/lib/types";
 
 interface BuilderTableProps {
   selection: BuildSelection;
-  onChoose: (slot: BrowserSlot) => void;
-  onClear: (slot: BrowserSlot) => void;
+  resolved: Partial<Record<CategoryId, CatalogPart[]>>;
+  issues: CompatIssue[];
+  onChoose: (slot: CategoryId) => void;
+  onClear: (slot: CategoryId, id?: string) => void;
+  onToggleExtras: () => void;
 }
 
 export function BuilderTable({
   selection,
+  resolved,
+  issues,
   onChoose,
   onClear,
+  onToggleExtras,
 }: BuilderTableProps) {
-  const cpu = selection.cpuId ? getCpu(selection.cpuId) : undefined;
-  const gpu = selection.gpuId ? getGpu(selection.gpuId) : undefined;
-  const memory = selection.memoryId
-    ? getMemory(selection.memoryId)
-    : undefined;
-
-  const rows: Array<{
-    slot: BrowserSlot;
-    selected: boolean;
-    name: string;
-    specs: string;
-  }> = [
-    {
-      slot: "cpu",
-      selected: Boolean(cpu),
-      name: cpu?.name ?? "",
-      specs: cpu
-        ? `${cpu.cores}C/${cpu.threads}T · ${cpu.boostGhz} GHz · ${cpu.tdpW}W · ST ${cpu.singleThreadIndex}`
-        : "",
-    },
-    {
-      slot: "gpu",
-      selected: Boolean(gpu),
-      name: gpu?.name ?? "",
-      specs: gpu
-        ? `${gpu.vramGb}GB · ${gpu.tdpW}W · Raster ${gpu.rasterIndex} · ${gpu.tier}`
-        : "",
-    },
-    {
-      slot: "memory",
-      selected: Boolean(memory),
-      name: memory?.name ?? "",
-      specs: memory
-        ? `${memory.capacityGb}GB · ${memory.type}-${memory.speedMtps} · ${memory.modules}`
-        : "",
-    },
-  ];
+  const rows = CATEGORIES.filter(
+    (c) => c.core || selection.showExtras || (selection.parts[c.id]?.length ?? 0) > 0,
+  );
 
   return (
     <div className="glow-panel overflow-hidden">
-      <div className="border-b border-border px-4 py-3 font-mono text-xs uppercase tracking-[0.16em] text-accent">
-        System Builder
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="font-mono text-xs uppercase tracking-[0.16em] text-accent">
+          System Builder
+        </div>
+        <button type="button" className="btn-ghost text-xs" onClick={onToggleExtras}>
+          {selection.showExtras ? "Hide extras" : "Show peripherals & extras"}
+        </button>
       </div>
       <div className="overflow-x-auto">
-        <table className="matrix-table min-w-[640px]">
+        <table className="matrix-table min-w-[760px]">
           <thead>
             <tr>
-              <th className="w-28">Component</th>
+              <th className="w-36">Component</th>
               <th>Selection</th>
               <th>Key Specs</th>
-              <th className="w-40">Actions</th>
+              <th className="w-44">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.slot}>
-                <td className="font-mono text-sm text-accent">
-                  {slotLabel(row.slot)}
-                </td>
-                <td>
-                  {row.selected ? (
-                    <span className="font-medium text-foreground">
-                      {row.name}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-matrix"
-                      onClick={() => onChoose(row.slot)}
-                    >
-                      Choose a {slotLabel(row.slot)}
-                    </button>
-                  )}
-                </td>
-                <td className="text-sm text-muted">
-                  {row.selected ? row.specs : "—"}
-                </td>
-                <td>
-                  {row.selected ? (
-                    <div className="flex gap-2">
+            {rows.map((cat) => {
+              const ids = getSlotIds(selection, cat.id);
+              const parts = resolved[cat.id] ?? [];
+              const selected = parts.length > 0;
+              const slotIssues = issues.filter((i) =>
+                i.categories.includes(cat.id),
+              );
+
+              return (
+                <tr key={cat.id}>
+                  <td className="font-mono text-sm text-accent">
+                    {slotLabel(cat.id)}
+                    {cat.multiple ? (
+                      <span className="ml-1 text-[0.65rem] text-muted">+</span>
+                    ) : null}
+                  </td>
+                  <td>
+                    {selected ? (
+                      <div className="space-y-1">
+                        {parts.map((part) => (
+                          <div key={part.id} className="font-medium text-foreground">
+                            {part.name}
+                            {part.custom ? (
+                              <span className="badge ml-2">custom</span>
+                            ) : null}
+                          </div>
+                        ))}
+                        {slotIssues.slice(0, 2).map((issue) => (
+                          <div
+                            key={issue.code + issue.message}
+                            className={
+                              issue.severity === "error"
+                                ? "text-xs text-danger"
+                                : issue.severity === "warning"
+                                  ? "text-xs text-warning"
+                                  : "text-xs text-muted"
+                            }
+                          >
+                            {issue.message}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
                       <button
                         type="button"
                         className="btn-matrix"
-                        onClick={() => onChoose(row.slot)}
+                        onClick={() => onChoose(cat.id)}
                       >
-                        Swap
+                        Choose a {slotLabel(cat.id)}
                       </button>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        onClick={() => onClear(row.slot)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted">Empty slot</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                    )}
+                  </td>
+                  <td className="text-sm text-muted">
+                    {selected
+                      ? parts.map((p) => p.summary || "—").join(" | ")
+                      : "—"}
+                  </td>
+                  <td>
+                    {selected ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-matrix"
+                          onClick={() => onChoose(cat.id)}
+                        >
+                          {cat.multiple ? "Add" : "Swap"}
+                        </button>
+                        {cat.multiple
+                          ? parts.map((part) => (
+                              <button
+                                key={part.id}
+                                type="button"
+                                className="btn-ghost"
+                                onClick={() => onClear(cat.id, part.id)}
+                              >
+                                Remove
+                              </button>
+                            ))
+                          : (
+                              <button
+                                type="button"
+                                className="btn-ghost"
+                                onClick={() => onClear(cat.id)}
+                              >
+                                Remove
+                              </button>
+                            )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted">
+                        {ids.length ? "Resolving…" : "Empty slot"}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

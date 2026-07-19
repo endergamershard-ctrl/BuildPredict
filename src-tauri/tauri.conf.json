@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "BuildPredict",
   "mainBinaryName": "buildpredict",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.endergamershard.buildpredict",
   "build": {
     "frontendDist": "../out",
@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' data: asset: https:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.bestbuy.com https://api.retailerapi.com ipc: http://ipc.localhost"
     }
   },
   "bundle": {

@@ -1,6 +1,10 @@
+mod pricing;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_http::init())
+    .plugin(tauri_plugin_store::Builder::new().build())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -11,6 +15,11 @@ pub fn run() {
       }
       Ok(())
     })
+    .invoke_handler(tauri::generate_handler![
+      pricing::get_pricing_settings,
+      pricing::save_pricing_settings,
+      pricing::fetch_price_quotes
+    ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

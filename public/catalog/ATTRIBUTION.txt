@@ -1,0 +1,2 @@
+Component catalog derived from BuildCores OpenDB (https://github.com/buildcores/buildcores-open-db), licensed under the Open Data Commons Attribution License (ODC-By) v1.0.
+Source revision: 0cf5d575d23dc7b61c91e6350c67f90a38e1dad2
